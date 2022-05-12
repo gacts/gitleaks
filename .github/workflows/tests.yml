@@ -1,0 +1,109 @@
+name: tests
+
+on:
+  push:
+    branches: [master, main]
+    tags-ignore: ['**']
+    paths-ignore: ['**.md']
+  pull_request:
+    paths-ignore: ['**.md']
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eslint:
+    name: Run eslint
+    runs-on: ubuntu-20.04
+    env: {FORCE_COLOR: 'true'}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with: {node-version: '16'}
+
+      - uses: actions/cache@v3
+        id: yarn-cache
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-yarn-
+
+      - if: steps.yarn-cache.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile --no-progress --non-interactive
+
+      - run: yarn lint
+
+  dist-built:
+    name: Check distributive built state
+    runs-on: ubuntu-20.04
+    outputs:
+      dist-changed: ${{ steps.state.outputs.changed }}
+    env: {FORCE_COLOR: 'true'}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with: {node-version: '16'}
+
+      - uses: actions/cache@v3
+        id: yarn-cache
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-yarn-
+
+      - if: steps.yarn-cache.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile --no-progress --non-interactive
+
+      - run: yarn build
+
+      - uses: actions/upload-artifact@v3
+        with: {name: dist, path: ./dist/, retention-days: 1}
+
+      - id: state
+        run: echo "::set-output name=changed::`git diff --diff-filter=ACMUXTR --name-only | grep dist/ > /dev/null && echo 'true' || echo 'false'`"
+
+  commit-and-push-fresh-dist:
+    name: Commit and push fresh distributive
+    needs: [dist-built]
+    if: ${{ needs.dist-built.outputs.dist-changed == 'true' }}
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/download-artifact@v3
+        with: {name: dist, path: ./dist/}
+
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with: {commit_message: Automatic distributive rebuild}
+
+  run-this-action:
+    name: Run action (${{ matrix.runs-on }}, version ${{ matrix.version }})
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ubuntu-latest, macos-latest, windows-latest]
+        version: [7.3.0, 8.7.1, latest]
+    steps:
+      - uses: actions/checkout@v3
+        with: {fetch-depth: 0}
+
+      - name: Run this action
+        id: gitleaks
+        uses: ./
+        with:
+          version: ${{ matrix.version }}
+
+      #- if: ${{ always() }}
+      #  uses: github/codeql-action/upload-sarif@v2
+      #  with:
+      #    sarif_file: ${{ steps.gitleaks.outputs.sarif }}
+
+      - run: gitleaks help
+        if: startsWith(matrix.version, '8') || matrix.version == 'latest'
+
+      - run: gitleaks --version
+        if: startsWith(matrix.version, '7')

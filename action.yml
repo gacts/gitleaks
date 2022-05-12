@@ -1,0 +1,42 @@
+name: GitLeaks
+description: Installs and runs GitLeaks in your actions workflow
+
+inputs:
+  version:
+    description: GitLeaks version
+    required: true
+    default: latest
+  config-path:
+    description: Path to the config file
+    required: false
+  path:
+    description: Path to source (git repo, directory, file; current working directory by default)
+    required: false
+  run:
+    description: Set it to "true" to run GitLeaks, or "false" if you don't want it to run (you can do this later manually)
+    required: false
+    default: "true"
+  fail-on-error:
+    description: Set "false" for exiting without an error when GitLeaks run failed
+    required: false
+    default: "true"
+  github-token:
+    description: GitHub auth token. Since there's a default, this is typically not supplied by the user
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  gitleaks-bin:
+    description: Path to the gitleaks binary file
+  sarif:
+    description: Path to the report in SARIF format
+  exit-code:
+    description: GitLeaks exit code (will be set only if "inputs.run" is "true")
+
+runs:
+  using: node16
+  main: dist/index.js
+
+branding:
+  icon: eye
+  color: red
