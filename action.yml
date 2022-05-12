@@ -1,5 +1,5 @@
 name: GitLeaks
-description: Installs and runs gitleaks in your actions workflow
+description: Installs and runs GitLeaks in your actions workflow
 
 inputs:
   version:

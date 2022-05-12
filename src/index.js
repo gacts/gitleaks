@@ -10,7 +10,7 @@ const fs = require('fs/promises')
 
 // read action inputs
 const input = {
-  version: core.getInput('version', {required: true}).replace(/^v/, ''), // strip the 'v' prefix
+  version: core.getInput('version', {required: true}).toLowerCase().replace(/^v/, ''), // strip the 'v' prefix
   configPath: core.getInput('config-path'),
   path: core.getInput('path'),
   run: stringToBool(core.getInput('run')),
