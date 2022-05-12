@@ -80,7 +80,7 @@ async function doInstall(version) {
     core.info(`👌 Restored from cache`)
   } else { // cache MISS
     const distUri = getGitLeaksURI(process.platform, process.arch, version)
-    const distPath = await tc.downloadTool(distUri)
+    const distPath = await tc.downloadTool(distUri, path.join(os.tmpdir(), `gitleaks.tmp`))
     const binPath = path.join(pathToInstall, 'gitleaks')
 
     switch (true) {
