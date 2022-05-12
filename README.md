@@ -22,14 +22,15 @@ jobs:
       - uses: actions/checkout@v3
         with: {fetch-depth: 0}
 
-      - uses: gacts/gitleaks@v1
+      - name: Check for GitLeaks
+        uses: gacts/gitleaks@v1 # Action page: <https://github.com/gacts/gitleaks>
         #id: gitleaks
         #with:
         #  version: latest
         #  config-path: .github/.gitleaks.toml
         #  path: any/directory/path
 
-      #- if: ${{ always() }} # disabling reason - https://github.com/zricethezav/gitleaks/issues/782
+      #- if: ${{ always() }} # reason - https://github.com/zricethezav/gitleaks/issues/782
       #  uses: github/codeql-action/upload-sarif@v2
       #  with:
       #    sarif_file: ${{ steps.gitleaks.outputs.sarif }}
