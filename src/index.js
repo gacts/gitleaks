@@ -60,7 +60,7 @@ async function run() {
   core.setOutput('gitleaks-bin', gitLeaksBinPath)
 
   if (versionToInstall.startsWith("8")) {
-    await exec.exec(`"${gitLeaksBinPath}"`, ['version'], {silent: true})
+    await exec.exec(`"${gitLeaksBinPath}"`, ['version'], {silent: false})
   } else {
     throw new Error(`Unsupported version: ${versionToInstall}`)
   }
@@ -80,12 +80,12 @@ async function run() {
     const exitCode = await exec.exec(
       `"${gitLeaksBinPath}"`,
       [...configArgs, ...commonArgs],
-      {silent: true, ignoreReturnCode: true, delay: 60 * 1000},
+      {ignoreReturnCode: true, delay: 60 * 1000},
     )
     core.setOutput('exit-code', exitCode)
 
     if (exitCode !== 0) {
-      core.warning('⛔ GitLeaks encountered leaks!')
+      core.warning('⛔ GitLeaks encountered leaks')
     } else {
       core.info('👍 Your code is good to go!')
     }
