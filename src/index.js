@@ -4,52 +4,64 @@ const github = require('@actions/github') // docs: https://github.com/actions/to
 const io = require('@actions/io') // docs: https://github.com/actions/toolkit/tree/main/packages/io
 const exec = require('@actions/exec') // docs: https://github.com/actions/toolkit/tree/main/packages/exec
 const path = require('path')
-
-const trueCases = ['true', '1', 'yes', 'ok']
+const os = require('os')
 
 // read action inputs
 const input = {
   version: core.getInput('version', {required: true}).replace(/^v/, ''), // strip the 'v' prefix
   configPath: core.getInput('config-path'),
   path: core.getInput('path'),
-  run: trueCases.includes(core.getInput('run').toLowerCase()),
-  failOnError: trueCases.includes(core.getInput('fail-on-error').toLowerCase()),
+  run: stringToBool(core.getInput('run')),
+  failOnError: stringToBool(core.getInput('fail-on-error')),
   githubToken: core.getInput('github-token'),
 }
 
-// main action entrypoint
-async function run() {
-  let versionToInstall
+const toolName = 'gitleaks' // for caching tool
 
-  if (input.version.toLowerCase() === 'latest') {
+// main action entrypoint
+async function runAction() {
+  let version
+
+  if (input.version.toLowerCase().trim() === 'latest') {
     core.debug('Requesting latest GitLeaks version...')
-    versionToInstall = await getLatestGitLeaksVersion(input.githubToken)
+    version = await getLatestGitLeaksVersion(input.githubToken)
   } else {
-    versionToInstall = input.version
+    version = input.version
   }
 
   core.startGroup('💾 Install GitLeaks')
-  core.info(`Version to install: ${versionToInstall}`)
+  core.info(`Version to install: ${version}`)
 
-  const distUri = getGitLeaksURI(process.platform, process.arch, versionToInstall)
-  const distArchivePath = await tc.downloadTool(distUri)
-  const extractedDistPath = distArchivePath + '-gitleaks'
+  const foundPathInCache = tc.find(toolName, version)
 
-  switch (true) {
-    case distUri.toLowerCase().endsWith('tar.gz'):
-      await tc.extractTar(distArchivePath, extractedDistPath)
-      break
+  if (foundPathInCache === "") { // found nothing (cache MISS)
+    const distUri = getGitLeaksURI(process.platform, process.arch, version)
+    core.info(`Distributive URI: ${distUri}`)
 
-    case distUri.toLowerCase().endsWith('zip'):
-      await tc.extractZip(distArchivePath, extractedDistPath)
-      break
+    const distArchivePath = await tc.downloadTool(distUri)
+    const extractedDistPath = distArchivePath + '-gitleaks'
 
-    default:
-      throw new Error('Unsupported archive format')
+    switch (true) {
+      case distUri.toLowerCase().endsWith('tar.gz'):
+        await tc.extractTar(distArchivePath, extractedDistPath)
+        break
+
+      case distUri.toLowerCase().endsWith('zip'):
+        await tc.extractZip(distArchivePath, extractedDistPath)
+        break
+
+      default:
+        throw new Error('Unsupported archive format')
+    }
+
+    const cachedPath = await tc.cacheDir(extractedDistPath, toolName, version)
+    await io.rmRF(extractedDistPath) // is no longer needed
+
+    core.addPath(cachedPath)
+  } else { // cache HIT
+    core.addPath(foundPathInCache)
   }
 
-  core.debug(`Add ${extractedDistPath} to the $PATH`)
-  core.addPath(extractedDistPath)
   core.endGroup()
 
   core.startGroup('🧪 Installation check')
@@ -59,10 +71,10 @@ async function run() {
   core.info(`GitLeaks installed: ${gitLeaksBinPath}`)
   core.setOutput('gitleaks-bin', gitLeaksBinPath)
 
-  if (versionToInstall.startsWith("8")) {
+  if (version.startsWith("8")) {
     await exec.exec(`"${gitLeaksBinPath}"`, ['version'], {silent: true})
   } else {
-    throw new Error(`Unsupported version: ${versionToInstall}`)
+    throw new Error(`Unsupported version: ${version}`)
   }
 
   core.endGroup()
@@ -70,7 +82,7 @@ async function run() {
   if (input.run) {
     core.info(`🔑 Run GitLeaks`)
 
-    const sarifReportPath = path.join(extractedDistPath, 'gitleaks.sarif')
+    const sarifReportPath = path.join(os.tmpdir(), 'gitleaks.sarif')
     core.setOutput('sarif', sarifReportPath)
 
     const sourcePath = input.path === "" ? process.cwd() : input.path
@@ -78,20 +90,18 @@ async function run() {
     const configArgs = input.configPath === "" ? [] : ['--config', input.configPath]
 
     const exitCode = await exec.exec(
-      `"${gitLeaksBinPath}"`,
-      [...configArgs, ...commonArgs],
-      {ignoreReturnCode: true, delay: 60 * 1000},
+      `"${gitLeaksBinPath}"`, [...configArgs, ...commonArgs], {ignoreReturnCode: true},
     )
     core.setOutput('exit-code', exitCode)
 
     if (exitCode !== 0) {
       core.warning('⛔ GitLeaks encountered leaks')
+
+      if (input.failOnError) {
+        process.exit(exitCode)
+      }
     } else {
       core.info('👍 Your code is good to go!')
-    }
-
-    if (input.failOnError) {
-      process.exit(exitCode)
     }
   }
 }
@@ -175,9 +185,18 @@ function getGitLeaksURI(platform, arch, version) {
   throw new Error(`Unsupported version: ${version}`)
 }
 
+/**
+ * @param {string} s
+ *
+ * @returns boolean
+ */
+function stringToBool(s) {
+  return ['true', '1', 'yes', 'ok'].includes(s.toLowerCase())
+}
+
 // run the action
 try {
-  run()
+  runAction()
 } catch (error) {
   core.setFailed(error.message)
 }
