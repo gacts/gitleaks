@@ -68,7 +68,7 @@ async function run() {
   core.endGroup()
 
   if (input.run) {
-    core.info(`Run GitLeaks`)
+    core.info(`🔑 Run GitLeaks`)
 
     const sarifReportPath = path.join(extractedDistPath, 'gitleaks.sarif')
     core.setOutput('sarif', sarifReportPath)
@@ -80,14 +80,14 @@ async function run() {
     const exitCode = await exec.exec(
       `"${gitLeaksBinPath}"`,
       [...configArgs, ...commonArgs],
-      {ignoreReturnCode: true, delay: 60 * 1000},
+      {silent: true, ignoreReturnCode: true, delay: 60 * 1000},
     )
     core.setOutput('exit-code', exitCode)
 
     if (exitCode !== 0) {
-      core.warning('🛑 GitLeaks encountered leaks')
+      core.warning('⛔ GitLeaks encountered leaks')
     } else {
-      core.info('✅ Your code is good to go!')
+      core.info('👍 Your code is good to go!')
     }
 
     if (input.failOnError) {
