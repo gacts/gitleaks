@@ -23,7 +23,7 @@ jobs:
         with: {fetch-depth: 0}
 
       - uses: gacts/gitleaks@v1
-        id: gitleaks
+        #id: gitleaks
         #with:
         #  version: latest
         #  config-path: .github/.gitleaks.toml
