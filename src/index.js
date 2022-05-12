@@ -60,7 +60,7 @@ async function run() {
   core.setOutput('gitleaks-bin', gitLeaksBinPath)
 
   if (versionToInstall.startsWith("8")) {
-    await exec.exec(`"${gitLeaksBinPath}"`, ['version'], {silent: false})
+    await exec.exec(`"${gitLeaksBinPath}"`, ['version'], {silent: true})
   } else {
     throw new Error(`Unsupported version: ${versionToInstall}`)
   }
