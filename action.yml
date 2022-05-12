@@ -1,4 +1,4 @@
-name: GitLeaks
+name: Run GitLeaks
 description: Installs and runs GitLeaks in your actions workflow
 
 inputs:

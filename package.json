@@ -1,5 +1,5 @@
 {
-  "name": "gitleaks",
+  "name": "run-gitleaks",
   "description": "Installs and runs gitleaks in your actions workflow",
   "main": "src/index.js",
   "scripts": {
