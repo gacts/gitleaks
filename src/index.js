@@ -3,6 +3,7 @@ const tc = require('@actions/tool-cache') // docs: https://github.com/actions/to
 const github = require('@actions/github') // docs: https://github.com/actions/toolkit/tree/main/packages/github
 const io = require('@actions/io') // docs: https://github.com/actions/toolkit/tree/main/packages/io
 const exec = require('@actions/exec') // docs: https://github.com/actions/toolkit/tree/main/packages/exec
+const cache = require('@actions/cache') // docs: https://github.com/actions/toolkit/tree/main/packages/cache
 const path = require('path')
 const os = require('os')
 
@@ -58,43 +59,47 @@ async function runAction() {
  * @throws
  */
 async function doInstall(version) {
-  const toolName = 'gitleaks' // for caching tool
+  const pathToInstall = path.join(os.tmpdir(), `gitleaks-${version}`)
 
-  core.info(`Version to install: ${version}`)
+  core.info(`Version to install: ${version} (path: ${pathToInstall})`)
 
-  const foundPathInCache = tc.find(toolName, version)
+  const cacheKey = `gitleaks-${version}-${process.platform}-${process.arch}`
 
-  if (foundPathInCache === "") { // found nothing (cache MISS)
+  let restoredFromCache = undefined
+
+  try {
+    restoredFromCache = await cache.restoreCache([pathToInstall], cacheKey)
+  } catch (e) {
+    core.warning(e)
+  }
+
+  if (restoredFromCache !== undefined) { // cache HIT
+    core.info(`👌 Restored from cache`)
+  } else { // cache MISS
     const distUri = getGitLeaksURI(process.platform, process.arch, version)
-
-    core.info(`Downloading distributive (${distUri})`)
     const distArchivePath = await tc.downloadTool(distUri)
 
-    core.info('Extracting archive')
-    const extractedDistPath = distArchivePath + '-gitleaks'
-
     switch (true) {
-      case distUri.toLowerCase().endsWith('tar.gz'):
-        await tc.extractTar(distArchivePath, extractedDistPath)
+      case distUri.endsWith('tar.gz'):
+        await tc.extractTar(distArchivePath, pathToInstall)
         break
 
-      case distUri.toLowerCase().endsWith('zip'):
-        await tc.extractZip(distArchivePath, extractedDistPath)
+      case distUri.endsWith('zip'):
+        await tc.extractZip(distArchivePath, pathToInstall)
         break
 
       default:
-        throw new Error('Unsupported archive format')
+        throw new Error(`Unsupported archive format: ${distUri}`)
     }
 
-    core.info('Caching extracted directory')
-    const cachedPath = await tc.cacheDir(extractedDistPath, toolName, version)
-    await io.rmRF(extractedDistPath) // is no longer needed
-
-    core.addPath(cachedPath)
-  } else { // cache HIT
-    core.info(`Restoring from the cache: ${foundPathInCache}`)
-    core.addPath(foundPathInCache)
+    try {
+      await cache.saveCache([pathToInstall], cacheKey)
+    } catch (e) {
+      core.warning(e)
+    }
   }
+
+  core.addPath(pathToInstall)
 }
 
 /**
