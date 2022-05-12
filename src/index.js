@@ -16,8 +16,6 @@ const input = {
   githubToken: core.getInput('github-token'),
 }
 
-const toolName = 'gitleaks' // for caching tool
-
 // main action entrypoint
 async function runAction() {
   let version
@@ -30,15 +28,49 @@ async function runAction() {
   }
 
   core.startGroup('💾 Install GitLeaks')
+  await doInstall(version)
+  core.endGroup()
+
+  core.startGroup('🧪 Installation check')
+  await doCheck(version)
+  core.endGroup()
+
+  if (input.run) {
+    const exitCode = await doRun()
+
+    if (exitCode !== 0) {
+      core.warning('⛔ GitLeaks encountered leaks')
+
+      if (input.failOnError) {
+        process.exit(exitCode)
+      }
+    } else {
+      core.info('👍 Your code is good to go!')
+    }
+  }
+}
+
+/**
+ * @param {string} version
+ *
+ * @returns {Promise<void>}
+ *
+ * @throws
+ */
+async function doInstall(version) {
+  const toolName = 'gitleaks' // for caching tool
+
   core.info(`Version to install: ${version}`)
 
   const foundPathInCache = tc.find(toolName, version)
 
   if (foundPathInCache === "") { // found nothing (cache MISS)
     const distUri = getGitLeaksURI(process.platform, process.arch, version)
-    core.info(`Distributive URI: ${distUri}`)
 
+    core.info(`Downloading distributive (${distUri})`)
     const distArchivePath = await tc.downloadTool(distUri)
+
+    core.info('Extracting archive')
     const extractedDistPath = distArchivePath + '-gitleaks'
 
     switch (true) {
@@ -54,56 +86,62 @@ async function runAction() {
         throw new Error('Unsupported archive format')
     }
 
+    core.info('Caching extracted directory')
     const cachedPath = await tc.cacheDir(extractedDistPath, toolName, version)
     await io.rmRF(extractedDistPath) // is no longer needed
 
     core.addPath(cachedPath)
   } else { // cache HIT
+    core.info(`Restoring from the cache: ${foundPathInCache}`)
     core.addPath(foundPathInCache)
   }
+}
 
-  core.endGroup()
-
-  core.startGroup('🧪 Installation check')
-
+/**
+ * @param {string} version
+ *
+ * @returns {Promise<void>}
+ *
+ * @throws
+ */
+async function doCheck(version) {
   const gitLeaksBinPath = await io.which('gitleaks', true)
+
+  if (gitLeaksBinPath === "") {
+    throw new Error('gitleaks binary file not found in $PATH')
+  }
 
   core.info(`GitLeaks installed: ${gitLeaksBinPath}`)
   core.setOutput('gitleaks-bin', gitLeaksBinPath)
 
   if (version.startsWith("8")) {
-    await exec.exec(`"${gitLeaksBinPath}"`, ['version'], {silent: true})
+    await exec.exec('gitleaks', ['version'], {silent: true})
   } else {
     throw new Error(`Unsupported version: ${version}`)
   }
+}
 
-  core.endGroup()
+/**
+ * @returns {Promise<number>}
+ *
+ * @throws
+ */
+async function doRun() {
+  core.info(`🔑 Run GitLeaks`)
 
-  if (input.run) {
-    core.info(`🔑 Run GitLeaks`)
+  const sarifReportPath = path.join(os.tmpdir(), 'gitleaks.sarif')
+  core.setOutput('sarif', sarifReportPath)
 
-    const sarifReportPath = path.join(os.tmpdir(), 'gitleaks.sarif')
-    core.setOutput('sarif', sarifReportPath)
+  const sourcePath = input.path === "" ? process.cwd() : input.path
+  const commonArgs = ['--verbose', '--report-format', 'sarif', '--report-path', sarifReportPath, '--source', sourcePath, 'detect']
+  const configArgs = input.configPath === "" ? [] : ['--config', input.configPath]
 
-    const sourcePath = input.path === "" ? process.cwd() : input.path
-    const commonArgs = ['--verbose', '--report-format', 'sarif', '--report-path', sarifReportPath, '--source', sourcePath, 'detect']
-    const configArgs = input.configPath === "" ? [] : ['--config', input.configPath]
+  const exitCode = await exec.exec(
+    'gitleaks', [...configArgs, ...commonArgs], {ignoreReturnCode: true},
+  )
+  core.setOutput('exit-code', exitCode)
 
-    const exitCode = await exec.exec(
-      `"${gitLeaksBinPath}"`, [...configArgs, ...commonArgs], {ignoreReturnCode: true},
-    )
-    core.setOutput('exit-code', exitCode)
-
-    if (exitCode !== 0) {
-      core.warning('⛔ GitLeaks encountered leaks')
-
-      if (input.failOnError) {
-        process.exit(exitCode)
-      }
-    } else {
-      core.info('👍 Your code is good to go!')
-    }
-  }
+  return exitCode
 }
 
 /**
@@ -195,8 +233,8 @@ function stringToBool(s) {
 }
 
 // run the action
-try {
-  runAction()
-} catch (error) {
+(async () => {
+  await runAction()
+})().catch(error => {
   core.setFailed(error.message)
-}
+})

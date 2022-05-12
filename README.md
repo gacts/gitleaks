@@ -10,6 +10,8 @@
 
 This action installs and runs [gitleaks][gitleaks] in your workflow. It can be run on **Linux** (`ubuntu-latest`), **macOS** (`macos-latest`), or **Windows** (`windows-latest`).
 
+Additionally, this action uses GitHub **caching mechanism** to speed up your workflow execution time!
+
 ## Usage
 
 ```yaml
