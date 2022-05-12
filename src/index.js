@@ -81,6 +81,7 @@ async function doInstall(version) {
   } else { // cache MISS
     const distUri = getGitLeaksURI(process.platform, process.arch, version)
     const distPath = await tc.downloadTool(distUri)
+    const binPath = path.join(pathToInstall, 'gitleaks')
 
     switch (true) {
       case distUri.endsWith('tar.gz'):
@@ -93,7 +94,6 @@ async function doInstall(version) {
 
       default: // not packed
         await io.mkdirP(pathToInstall)
-        const binPath = path.join(pathToInstall, 'gitleaks')
         await io.mv(distPath, binPath)
         await fs.chmod(binPath, 0o755)
     }
