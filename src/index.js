@@ -66,7 +66,7 @@ async function doInstall(version) {
 
   core.info(`Version to install: ${version} (target directory: ${pathToInstall})`)
 
-  const cacheKey = `gitleaks-${version}-${process.platform}-${process.arch}`
+  const cacheKey = `gitleaks-cache-v2-${version}-${process.platform}-${process.arch}`
 
   let restoredFromCache = undefined
 
