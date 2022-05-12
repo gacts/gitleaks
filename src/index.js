@@ -85,7 +85,7 @@ async function run() {
     core.setOutput('exit-code', exitCode)
 
     if (exitCode !== 0) {
-      core.warning('⛔ GitLeaks encountered leaks')
+      core.warning('⛔ GitLeaks encountered leaks!')
     } else {
       core.info('👍 Your code is good to go!')
     }
