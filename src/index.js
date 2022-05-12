@@ -81,7 +81,7 @@ async function doInstall(version) {
   } else { // cache MISS
     const distUri = getGitLeaksURI(process.platform, process.arch, version)
     const distPath = await tc.downloadTool(distUri, path.join(os.tmpdir(), `gitleaks.tmp`))
-    const binPath = path.join(pathToInstall, 'gitleaks')
+    const binPath = path.join(pathToInstall, 'gitleaks' + (process.platform === 'win32' ? '.exe' : ''))
 
     switch (true) {
       case distUri.endsWith('tar.gz'):
