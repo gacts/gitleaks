@@ -4,6 +4,13 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog][keepachangelog] and this project adheres to [Semantic Versioning][semver].
 
+## v1.1.0
+
+### Added
+
+- Searching for the config file (`.gitleaks.toml`, `gitleaks.toml`) inside `.github` directory if `with.config-path` is not provided
+- Verbose output for GitLeaks v7.x
+
 ## v1.0.0
 
 ### Added

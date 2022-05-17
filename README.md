@@ -12,6 +12,8 @@ This action provides a simple way to run [GitLeaks][gitleaks] in your CI/CD pipe
 
 In addition, it supports GitLeaks **v8.x** _(and v7.x)_, and uses GitHub **caching mechanism** to speed up your workflow execution time!
 
+The [config file](https://github.com/zricethezav/gitleaks/blob/master/config/gitleaks.toml) can be located in `.github` directory _(eg.: `<repo_root>/.github/.gitleaks.toml`)_, and if `with.config-path` was not provided - it will be used.
+
 ## Usage
 
 ```yaml
