@@ -199,9 +199,6 @@ async function findAlternativeConfigFile() {
       const stat = await fs.stat(locations[i])
 
       if (stat.isFile() && stat.size > 0) { // file exists and not empty
-
-        core.warning(locations[i])
-
         return locations[i]
       }
     } catch (e) {
