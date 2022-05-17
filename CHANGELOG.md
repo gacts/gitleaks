@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog][keepachangelog] and this project adher
 
 ## v1.1.0
 
+### Fixed
+
+- Log messages formatted
+
+## v1.1.0
+
 ### Added
 
 - Searching for the config file (`.gitleaks.toml`, `gitleaks.toml`) inside `.github` directory if `with.config-path` is not provided

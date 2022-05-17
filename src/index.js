@@ -142,15 +142,13 @@ async function doCheck(version) {
 async function doRun(version) {
   const alternativeConfig = await findAlternativeConfigFile()
   const sarifReportPath = path.join(os.tmpdir(), 'gitleaks.sarif')
-  core.setOutput('sarif', sarifReportPath)
-
   const execArgs = []
 
   if (version.startsWith('7')) { // https://github.com/zricethezav/gitleaks/tree/v7.0.0#usage-and-options
     if (input.configPath !== "") {
       execArgs.push('--config-path', input.configPath)
     } else if (alternativeConfig !== "") {
-      core.info(`Config file found: ${alternativeConfig}`)
+      core.info(`  🗒 Alternative config file found: ${alternativeConfig}`)
       execArgs.push('--config-path', alternativeConfig)
     }
 
@@ -165,7 +163,7 @@ async function doRun(version) {
     if (input.configPath !== "") {
       execArgs.push('--config', input.configPath)
     } else if (alternativeConfig !== "") {
-      core.info(`Config file found: ${alternativeConfig}`)
+      core.info(`  🗒 Alternative config file found: ${alternativeConfig}`)
       execArgs.push('--config', alternativeConfig)
     }
 
@@ -181,6 +179,7 @@ async function doRun(version) {
 
   const exitCode = await exec.exec('gitleaks', execArgs, {ignoreReturnCode: true, delay: 60 * 1000})
   core.setOutput('exit-code', exitCode)
+  core.setOutput('sarif', sarifReportPath)
 
   return exitCode
 }
