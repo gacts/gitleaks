@@ -4,6 +4,13 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog][keepachangelog] and this project adheres to [Semantic Versioning][semver].
 
+## v1.1.2
+
+### Fixed
+
+- Alternative config lookup order (new order is: `./gitleaks.toml`, `./.gitleaks.toml`, `./.github/gitleaks.toml`, `./.github/.gitleaks.toml`)
+- Alternative configs' lookup will be ignored when environment variable `GITLEAKS_CONFIG` is set
+
 ## v1.1.1
 
 ### Fixed

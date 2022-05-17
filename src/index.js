@@ -141,12 +141,15 @@ async function doCheck(version) {
  */
 async function doRun(version) {
   const alternativeConfig = await findAlternativeConfigFile()
+  const envConfigPath = process.env['GITLEAKS_CONFIG']
   const sarifReportPath = path.join(os.tmpdir(), 'gitleaks.sarif')
   const execArgs = []
 
   if (version.startsWith('7')) { // https://github.com/zricethezav/gitleaks/tree/v7.0.0#usage-and-options
     if (input.configPath !== "") {
       execArgs.push('--config-path', input.configPath)
+    } else if (envConfigPath !== "") {
+      // do nothing, gitleaks app should process this variable on its own side
     } else if (alternativeConfig !== "") {
       core.info(`  🗒 Alternative config file found: ${alternativeConfig}`)
       execArgs.push('--config-path', alternativeConfig)
@@ -162,6 +165,8 @@ async function doRun(version) {
   } else { // v8.x and latest, https://github.com/zricethezav/gitleaks/tree/v8.0.0#usage
     if (input.configPath !== "") {
       execArgs.push('--config', input.configPath)
+    } else if (envConfigPath !== "") {
+      // do nothing, gitleaks app should process this variable on its own side
     } else if (alternativeConfig !== "") {
       core.info(`  🗒 Alternative config file found: ${alternativeConfig}`)
       execArgs.push('--config', alternativeConfig)
@@ -188,9 +193,13 @@ async function doRun(version) {
  * @returns {Promise<string>} Returns empty string when nothing found
  */
 async function findAlternativeConfigFile() {
+  const cwd = process.cwd()
+
   const locations = [
-    path.join(process.cwd(), '.github', '.gitleaks.toml'),
-    path.join(process.cwd(), '.github', 'gitleaks.toml'),
+    path.join(cwd, 'gitleaks.toml'),
+    path.join(cwd, '.gitleaks.toml'),
+    path.join(cwd, '.github', 'gitleaks.toml'),
+    path.join(cwd, '.github', '.gitleaks.toml'),
   ]
 
   for (let i = 0; i < locations.length; i++) {
