@@ -194,6 +194,8 @@ async function findAlternativeConfigFile() {
     path.join(process.cwd(), '.github', 'gitleaks.toml'),
   ]
 
+  core.info(process.cwd())
+
   for (let i = 0; i < locations.length; i++) {
     try {
       const stat = await fs.stat(locations[i])
