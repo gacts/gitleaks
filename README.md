@@ -65,6 +65,13 @@ In subsequent steps you will be able to use the following variables:
 | Path to the report in [SARIF format][sarif]                     | `${{ steps.gitleaks.outputs.sarif }}`        | `/tmp/gitleaks.sarif`          |
 | GitLeaks exit code (will be set only if `inputs.run` is `true`) | `${{ steps.gitleaks.outputs.exit-code }}`    | `1`                            |
 
+## How do I remove a secret from git's history?
+
+[GitHub][removing-sensitive-data] has a great article on this using the [BFG Repo Cleaner][bfg].
+
+[removing-sensitive-data]:https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository
+[bfg]:https://rtyley.github.io/bfg-repo-cleaner/
+
 ## Alternative projects
 
 - [Official GitHub action](https://github.com/zricethezav/gitleaks-action)
