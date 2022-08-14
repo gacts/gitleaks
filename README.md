@@ -14,6 +14,26 @@ In addition, it supports GitLeaks **v8.x** _(and v7.x)_, and uses GitHub **cachi
 
 The [config file](https://github.com/zricethezav/gitleaks/blob/master/config/gitleaks.toml) can be located in `.github` directory _(eg.: `<repo_root>/.github/.gitleaks.toml`)_, and if `with.config-path` was not provided - it will be used.
 
+## Additional Configuration
+
+### `gitleaks:allow`
+
+> Since GitLeaks v8.10.0
+
+If you are knowingly committing a test secret that gitleaks will catch you can add a `gitleaks:allow` comment to that line which will instruct gitleaks
+to ignore that secret. Ex:
+
+```java
+class CustomClass:
+    discord_client_secret = '8dyfuiRyq=vVc3RRr_edRk-fK__JItpZ'  #gitleaks:allow
+```
+
+### `.gitleaksignore`
+
+> Since GitLeaks v8.10.0
+
+You can ignore specific findings by creating a `.gitleaksignore` file at the root of your repo. In release v8.10.0 Gitleaks added a `Fingerprint` value to the Gitleaks report. Each leak, or finding, has a Fingerprint that uniquely identifies a secret. Add this fingerprint to the `.gitleaksignore` file to ignore that specific secret. See Gitleaks' [.gitleaksignore](https://github.com/zricethezav/gitleaks/blob/master/.gitleaksignore) for an example. Note: this feature is expirmental and is subject to change in the future.
+
 ## Usage
 
 ```yaml
