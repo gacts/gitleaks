@@ -70,6 +70,9 @@ jobs:
     needs: [dist-built]
     if: ${{ needs.dist-built.outputs.dist-changed == 'true' }}
     runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v3
 
