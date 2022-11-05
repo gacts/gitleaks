@@ -63,7 +63,7 @@ jobs:
         with: {name: dist, path: ./dist/, retention-days: 1}
 
       - id: state
-        run: echo "changed=`git diff --diff-filter=ACMUXTR --name-only | grep dist/ > /dev/null && echo 'true' || echo 'false'`" >> $GITHUB_STATE
+        run: echo "changed=`git diff --diff-filter=ACMUXTR --name-only | grep dist/ > /dev/null && echo 'true' || echo 'false'`" >> $GITHUB_OUTPUT
 
   commit-and-push-fresh-dist:
     name: Commit and push fresh distributive
