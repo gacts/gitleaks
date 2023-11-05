@@ -34,7 +34,7 @@ outputs:
     description: GitLeaks exit code (will be set only if "inputs.run" is "true")
 
 runs:
-  using: node16
+  using: node20
   main: dist/index.js
 
 branding:
