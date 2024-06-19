@@ -267,6 +267,9 @@ function getDistUrl(platform, arch, version) {
         switch (arch) {
           case 'x64': // Amd64
             return `${baseUrl}/gitleaks-darwin-amd64`
+
+          case 'arm64': // Arm64
+            return `${baseUrl}/gitleaks-darwin-arm64`
         }
 
         throw new Error(`Unsupported MacOS architecture (${arch}) for 7.x version`)
