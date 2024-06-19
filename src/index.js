@@ -30,7 +30,7 @@ async function runAction() {
     version = input.version
   }
 
-  core.startGroup(`💾 Install GitLeaks ${version}`)
+  core.startGroup('💾 Install GitLeaks')
   await doInstall(version)
   core.endGroup()
 
