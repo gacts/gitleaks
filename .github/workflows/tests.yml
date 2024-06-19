@@ -1,4 +1,7 @@
-name: tests
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# docs: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
+
+name: 🧪 Tests
 
 on:
   push:
@@ -12,56 +15,37 @@ concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
 
+env: {FORCE_COLOR: 'true'}
+
 jobs:
-  eslint:
-    name: Run eslint
+  gitleaks:
+    name: Check for GitLeaks
     runs-on: ubuntu-latest
-    env: {FORCE_COLOR: 'true'}
+    steps:
+      - {uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - uses: gacts/gitleaks@v1
+
+  eslint:
+    name: Run code linter
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with: {node-version: '20'}
-
-      - uses: actions/cache@v4
-        id: yarn-cache
-        with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: ${{ runner.os }}-yarn-
-
-      - if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --no-progress --non-interactive
-
-      - run: yarn lint
+      - {uses: gacts/setup-node-with-cache@v1, with: {node-version: 20}}
+      - run: npm install
+      - run: npm run lint
 
   dist-built:
     name: Check distributive built state
     runs-on: ubuntu-latest
     outputs:
       dist-changed: ${{ steps.state.outputs.changed }}
-    env: {FORCE_COLOR: 'true'}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with: {node-version: '20'}
-
-      - uses: actions/cache@v4
-        id: yarn-cache
-        with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: ${{ runner.os }}-yarn-
-
-      - if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --no-progress --non-interactive
-
-      - run: yarn build
-
+      - {uses: gacts/setup-node-with-cache@v1, with: {node-version: 20}}
+      - run: npm install
+      - run: npm run build
       - uses: actions/upload-artifact@v4
         with: {name: dist, path: ./dist/, retention-days: 1}
-
       - id: state
         run: echo "changed=`git diff --diff-filter=ACMUXTR --name-only | grep dist/ > /dev/null && echo 'true' || echo 'false'`" >> $GITHUB_OUTPUT
 
@@ -75,21 +59,21 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/download-artifact@v4
         with: {name: dist, path: ./dist/}
-
       - uses: stefanzweifel/git-auto-commit-action@v5
         with: {commit_message: Automatic distributive rebuild}
 
   run-this-action:
-    name: Run action (${{ matrix.runs-on }}, version ${{ matrix.version }})
+    name: Run action (${{ matrix.runs-on }}, ${{ matrix.version }})
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
         runs-on: [ubuntu-latest, macos-latest, windows-latest]
-        version: [7.3.0, 8.7.1, latest]
+        version: [7.3.0, 8.7.1, 8.18.4, latest]
+        exclude:
+          - {runs-on: macos-latest, version: 7.3.0} # GitLeaks v7.x for macOS on arm64 is not supported
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
@@ -97,8 +81,7 @@ jobs:
       - name: Run this action
         id: gitleaks
         uses: ./
-        with:
-          version: ${{ matrix.version }}
+        with: {version: '${{ matrix.version }}'}
 
       #- if: ${{ always() }}
       #  uses: github/codeql-action/upload-sarif@v2
