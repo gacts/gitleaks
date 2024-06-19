@@ -108,7 +108,7 @@ In subsequent steps you will be able to use the following variables:
 
 ## Alternative projects
 
-- [Official GitHub action](https://github.com/gitleaks/gitleaks-action)
+- [Official GitHub action](https://github.com/gitleaks/gitleaks-action) (license key is required)
 
 ## Releasing
 
