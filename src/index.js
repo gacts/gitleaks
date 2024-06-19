@@ -10,7 +10,7 @@ const fs = require('fs/promises')
 
 // read action inputs
 const input = {
-  version: core.getInput('version', {required: true}).toLowerCase().replace(/^v/, ''), // strip the 'v' prefix
+  version: core.getInput('version', {required: true}).toLowerCase().replace(/^[vV]/, ''), // strip the 'v' prefix
   configPath: core.getInput('config-path'),
   path: core.getInput('path'),
   run: stringToBool(core.getInput('run')),
@@ -25,6 +25,7 @@ async function runAction() {
   if (input.version.toLowerCase().trim() === 'latest') {
     core.debug('Requesting latest GitLeaks version...')
     version = await getLatestGitLeaksVersion(input.githubToken)
+    core.debug(`Latest version: ${version}`)
   } else {
     version = input.version
   }
@@ -79,7 +80,7 @@ async function doInstall(version) {
   if (restoredFromCache !== undefined) { // cache HIT
     core.info(`👌 Restored from cache`)
   } else { // cache MISS
-    const distUri = getGitLeaksURI(process.platform, process.arch, version)
+    const distUri = getDistUrl(process.platform, process.arch, version)
     const distPath = await tc.downloadTool(distUri, path.join(os.tmpdir(), `gitleaks.tmp`))
     const binPath = path.join(pathToInstall, 'gitleaks' + (process.platform === 'win32' ? '.exe' : ''))
 
@@ -113,7 +114,7 @@ async function doInstall(version) {
  *
  * @returns {Promise<void>}
  *
- * @throws
+ * @throws {Error}
  */
 async function doCheck(version) {
   const gitLeaksBinPath = await io.which('gitleaks', true)
@@ -137,7 +138,7 @@ async function doCheck(version) {
  *
  * @returns {Promise<number>}
  *
- * @throws
+ * @throws {Error}
  */
 async function doRun(version) {
   const alternativeConfig = await findAlternativeConfigFile()
@@ -145,12 +146,12 @@ async function doRun(version) {
   const sarifReportPath = path.join(os.tmpdir(), 'gitleaks.sarif')
   const execArgs = []
 
-  if (version.startsWith('7')) { // https://github.com/zricethezav/gitleaks/tree/v7.0.0#usage-and-options
-    if (input.configPath !== "") {
+  if (version.startsWith('7')) { // https://github.com/gitleaks/gitleaks/tree/v7.0.0#usage-and-options
+    if (input.configPath) {
       execArgs.push('--config-path', input.configPath)
-    } else if (envConfigPath !== "") {
+    } else if (envConfigPath) {
       // do nothing, gitleaks app should process this variable on its own side
-    } else if (alternativeConfig !== "") {
+    } else if (alternativeConfig) {
       core.info(`  🗒 Alternative config file found: ${alternativeConfig}`)
       execArgs.push('--config-path', alternativeConfig)
     }
@@ -162,12 +163,12 @@ async function doRun(version) {
       '--report', sarifReportPath,
       '--path', input.path === "" ? process.cwd() : input.path,
     )
-  } else { // v8.x and latest, https://github.com/zricethezav/gitleaks/tree/v8.0.0#usage
-    if (input.configPath !== "") {
+  } else { // v8.x and latest, https://github.com/gitleaks/gitleaks/tree/v8.0.0#usage
+    if (input.configPath) {
       execArgs.push('--config', input.configPath)
-    } else if (envConfigPath !== "") {
+    } else if (envConfigPath) {
       // do nothing, gitleaks app should process this variable on its own side
-    } else if (alternativeConfig !== "") {
+    } else if (alternativeConfig) {
       core.info(`  🗒 Alternative config file found: ${alternativeConfig}`)
       execArgs.push('--config', alternativeConfig)
     }
@@ -190,7 +191,7 @@ async function doRun(version) {
 }
 
 /**
- * @returns {Promise<string>} Returns empty string when nothing found
+ * @returns {Promise<string|undefined>} Returns undefined when nothing found
  */
 async function findAlternativeConfigFile() {
   const cwd = process.cwd()
@@ -214,7 +215,7 @@ async function findAlternativeConfigFile() {
     }
   }
 
-  return ""
+  return undefined
 }
 
 /**
@@ -222,19 +223,20 @@ async function findAlternativeConfigFile() {
  * @returns {Promise<string>}
  */
 async function getLatestGitLeaksVersion(githubAuthToken) {
+  /** @type {import('@actions/github')} */
   const octokit = github.getOctokit(githubAuthToken)
 
   // docs: https://octokit.github.io/rest.js/v18#repos-get-latest-release
   const latest = await octokit.rest.repos.getLatestRelease({
-    owner: 'zricethezav',
+    owner: 'gitleaks',
     repo: 'gitleaks',
   })
 
-  return latest.data.tag_name.replace(/^v/, '') // strip the 'v' prefix
+  return latest.data.tag_name.replace(/^[vV]/, '') // strip the 'v' prefix
 }
 
 /**
- * @link https://github.com/zricethezav/gitleaks/releases
+ * @link https://github.com/gitleaks/gitleaks/releases
  *
  * @param {('linux'|'darwin'|'win32')} platform
  * @param {('x32'|'x64'|'arm'|'arm64')} arch
@@ -242,89 +244,85 @@ async function getLatestGitLeaksVersion(githubAuthToken) {
  *
  * @returns {string}
  *
- * @throws
+ * @throws {Error} Unsupported platform, architecture, or version
  */
-function getGitLeaksURI(platform, arch, version) {
+function getDistUrl(platform, arch, version) {
+  const baseUrl = `https://github.com/gitleaks/gitleaks/releases/download/v${version}`
+
   if (version.startsWith('7')) {
     switch (platform) {
       case 'linux': {
         switch (arch) {
           case 'x64': // Amd64
-            return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks-linux-amd64`
+            return `${baseUrl}/gitleaks-linux-amd64`
 
           case 'arm': // Arm
-            return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks-linux-arm`
+            return `${baseUrl}/gitleaks-linux-arm`
         }
 
-        throw new Error('Unsupported linux architecture for 7.x version')
+        throw new Error(`Unsupported linux architecture (${arch}) for 7.x version`)
       }
 
       case 'darwin': {
         switch (arch) {
           case 'x64': // Amd64
-            return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks-darwin-amd64`
+            return `${baseUrl}/gitleaks-darwin-amd64`
         }
 
-        throw new Error('Unsupported MacOS architecture for 7.x version')
+        throw new Error(`Unsupported MacOS architecture (${arch}) for 7.x version`)
       }
 
       case 'win32': {
         switch (arch) {
           case 'x32': // 386
-            return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks-windows-386.exe`
+            return `${baseUrl}/gitleaks-windows-386.exe`
 
           case 'x64': // Amd64
-            return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks-windows-amd64.exe`
+            return `${baseUrl}/gitleaks-windows-amd64.exe`
         }
 
-        throw new Error('Unsupported windows architecture for 7.x version')
+        throw new Error(`Unsupported windows architecture (${arch}) for 7.x version`)
       }
     }
 
-    throw new Error('Unsupported OS (platform) for 7.x version')
+    throw new Error(`Unsupported platform (${platform}) for 7.x version`)
   }
 
   switch (platform) { // v8.x and latest
     case 'linux': {
       switch (arch) {
-        case 'x32': // 386
-          return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x32.tar.gz`
-
         case 'x64': // Amd64
-          return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz`
+          return `${baseUrl}/gitleaks_${version}_linux_x64.tar.gz`
 
         case 'arm64': // Arm64
-          return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_arm64.tar.gz`
+          return `${baseUrl}/gitleaks_${version}_linux_arm64.tar.gz`
       }
 
-      throw new Error('Unsupported linux architecture')
+      throw new Error(`Unsupported linux architecture (${arch})`)
     }
 
     case 'darwin': {
       switch (arch) {
         case 'x64': // Amd64
-          return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks_${version}_darwin_x64.tar.gz`
+          return `${baseUrl}/gitleaks_${version}_darwin_x64.tar.gz`
 
         case 'arm64': // Arm64
-          return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks_${version}_darwin_arm64.tar.gz`
+          return `${baseUrl}/gitleaks_${version}_darwin_arm64.tar.gz`
       }
 
-      throw new Error('Unsupported MacOS architecture')
+      throw new Error(`Unsupported macOS architecture (${arch})`)
     }
 
     case 'win32': {
       switch (arch) {
-        case 'x32': // 386
-          return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks_${version}_windows_x32.zip`
-
         case 'x64': // Amd64
-          return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks_${version}_windows_x64.zip`
+          return `${baseUrl}/gitleaks_${version}_windows_x64.zip`
 
         case 'arm64': // Arm64
-          return `https://github.com/zricethezav/gitleaks/releases/download/v${version}/gitleaks_${version}_windows_arm64.zip`
+          return `${baseUrl}/gitleaks_${version}_windows_arm64.zip`
       }
 
-      throw new Error('Unsupported windows architecture')
+      throw new Error(`Unsupported windows architecture (${arch})`)
     }
   }
 
