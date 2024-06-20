@@ -3,7 +3,7 @@
   "description": "Installs and runs gitleaks in your actions workflow",
   "main": "src/index.js",
   "scripts": {
-    "lint": "eslint --config package.json ./src/**/*.js",
+    "lint": "eslint --config package.json './src/**/*.js'",
     "build": "ncc build src/index.js -o dist --minify --no-cache"
   },
   "repository": {
