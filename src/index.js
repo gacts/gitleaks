@@ -1,12 +1,12 @@
-const core = require('@actions/core') // docs: https://github.com/actions/toolkit/tree/main/packages/core
-const tc = require('@actions/tool-cache') // docs: https://github.com/actions/toolkit/tree/main/packages/tool-cache
-const github = require('@actions/github') // docs: https://github.com/actions/toolkit/tree/main/packages/github
-const io = require('@actions/io') // docs: https://github.com/actions/toolkit/tree/main/packages/io
-const exec = require('@actions/exec') // docs: https://github.com/actions/toolkit/tree/main/packages/exec
-const cache = require('@actions/cache') // docs: https://github.com/actions/toolkit/tree/main/packages/cache
-const path = require('path')
-const os = require('os')
-const fs = require('fs/promises')
+import core from '@actions/core' // docs: https://github.com/actions/toolkit/tree/main/packages/core
+import tc from '@actions/tool-cache' // docs: https://github.com/actions/toolkit/tree/main/packages/tool-cache
+import github from '@actions/github' // docs: https://github.com/actions/toolkit/tree/main/packages/github
+import io from '@actions/io' // docs: https://github.com/actions/toolkit/tree/main/packages/io
+import exec from '@actions/exec' // docs: https://github.com/actions/toolkit/tree/main/packages/exec
+import cache from '@actions/cache' // docs: https://github.com/actions/toolkit/tree/main/packages/cache
+import path from 'path'
+import os from 'os'
+import fs from 'fs/promises'
 
 // read action inputs
 const input = {
@@ -210,6 +210,7 @@ async function findAlternativeConfigFile() {
       if (stat.isFile() && stat.size > 0) { // file exists and not empty
         return locations[i]
       }
+      // eslint-disable-next-line no-unused-vars
     } catch (e) {
       // file was not found
     }
