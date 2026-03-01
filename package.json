@@ -31,10 +31,10 @@
     "@actions/tool-cache": "^2.0.2"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/eslintrc": "^3.3.4",
     "@eslint/js": "^10.0.1",
     "@vercel/ncc": "^0.38.4",
-    "eslint": "^10.0.0",
+    "eslint": "^10.0.2",
     "globals": "^17.3.0"
   },
   "volta": {
