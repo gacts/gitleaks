@@ -1,21 +1,21 @@
-import core from '@actions/core' // docs: https://github.com/actions/toolkit/tree/main/packages/core
-import tc from '@actions/tool-cache' // docs: https://github.com/actions/toolkit/tree/main/packages/tool-cache
-import github from '@actions/github' // docs: https://github.com/actions/toolkit/tree/main/packages/github
-import io from '@actions/io' // docs: https://github.com/actions/toolkit/tree/main/packages/io
-import exec from '@actions/exec' // docs: https://github.com/actions/toolkit/tree/main/packages/exec
-import cache from '@actions/cache' // docs: https://github.com/actions/toolkit/tree/main/packages/cache
+import {addPath, debug, endGroup, getInput, info, setFailed, setOutput, startGroup, warning} from '@actions/core' // docs: https://github.com/actions/toolkit/tree/main/packages/core
+import {downloadTool, extractTar, extractZip} from '@actions/tool-cache' // docs: https://github.com/actions/toolkit/tree/main/packages/tool-cache
+import {getOctokit} from '@actions/github' // docs: https://github.com/actions/toolkit/tree/main/packages/github
+import {mkdirP, mv, which} from '@actions/io' // docs: https://github.com/actions/toolkit/tree/main/packages/io
+import {exec} from '@actions/exec' // docs: https://github.com/actions/toolkit/tree/main/packages/exec
+import {restoreCache, saveCache} from '@actions/cache' // docs: https://github.com/actions/toolkit/tree/main/packages/cache
 import path from 'path'
 import os from 'os'
 import fs from 'fs/promises'
 
 // read action inputs
 const input = {
-  version: core.getInput('version', {required: true}).toLowerCase().replace(/^[vV]/, ''), // strip the 'v' prefix
-  configPath: core.getInput('config-path'),
-  path: core.getInput('path'),
-  run: stringToBool(core.getInput('run')),
-  failOnError: stringToBool(core.getInput('fail-on-error')),
-  githubToken: core.getInput('github-token'),
+  version: getInput('version', {required: true}).toLowerCase().replace(/^[vV]/, ''), // strip the 'v' prefix
+  configPath: getInput('config-path'),
+  path: getInput('path'),
+  run: stringToBool(getInput('run')),
+  failOnError: stringToBool(getInput('fail-on-error')),
+  githubToken: getInput('github-token'),
 }
 
 // main action entrypoint
@@ -23,34 +23,34 @@ async function runAction() {
   let version
 
   if (input.version.toLowerCase().trim() === 'latest') {
-    core.debug('Requesting latest GitLeaks version...')
+    debug('Requesting latest GitLeaks version...')
     version = await getLatestGitLeaksVersion(input.githubToken)
-    core.debug(`Latest version: ${version}`)
+    debug(`Latest version: ${version}`)
   } else {
     version = input.version
   }
 
-  core.startGroup('💾 Install GitLeaks')
+  startGroup('💾 Install GitLeaks')
   await doInstall(version)
-  core.endGroup()
+  endGroup()
 
-  core.startGroup('🧪 Installation check')
+  startGroup('🧪 Installation check')
   await doCheck(version)
-  core.endGroup()
+  endGroup()
 
   if (input.run) {
-    core.info('  🔑 Run GitLeaks')
+    info('  🔑 Run GitLeaks')
 
     const exitCode = await doRun(version)
 
     if (exitCode !== 0) {
-      core.warning('⛔ GitLeaks encountered leaks')
+      warning('⛔ GitLeaks encountered leaks')
 
       if (input.failOnError) {
         process.exit(exitCode)
       }
     } else {
-      core.info('👍 Your code is good to go!')
+      info('👍 Your code is good to go!')
     }
   }
 }
@@ -65,48 +65,48 @@ async function runAction() {
 async function doInstall(version) {
   const pathToInstall = path.join(os.tmpdir(), `gitleaks-${version}`)
 
-  core.info(`Version to install: ${version} (target directory: ${pathToInstall})`)
+  info(`Version to install: ${version} (target directory: ${pathToInstall})`)
 
   const cacheKey = `gitleaks-cache-v2-${version}-${process.platform}-${process.arch}`
 
   let restoredFromCache = undefined
 
   try {
-    restoredFromCache = await cache.restoreCache([pathToInstall], cacheKey)
+    restoredFromCache = await restoreCache([pathToInstall], cacheKey)
   } catch (e) {
-    core.warning(e)
+    warning(e)
   }
 
   if (restoredFromCache !== undefined) { // cache HIT
-    core.info(`👌 Restored from cache`)
+    info(`👌 Restored from cache`)
   } else { // cache MISS
     const distUri = getDistUrl(process.platform, process.arch, version)
-    const distPath = await tc.downloadTool(distUri, path.join(os.tmpdir(), `gitleaks.tmp`))
+    const distPath = await downloadTool(distUri, path.join(os.tmpdir(), `gitleaks.tmp`))
     const binPath = path.join(pathToInstall, 'gitleaks' + (process.platform === 'win32' ? '.exe' : ''))
 
     switch (true) {
       case distUri.endsWith('tar.gz'):
-        await tc.extractTar(distPath, pathToInstall)
+        await extractTar(distPath, pathToInstall)
         break
 
       case distUri.endsWith('zip'):
-        await tc.extractZip(distPath, pathToInstall)
+        await extractZip(distPath, pathToInstall)
         break
 
       default: // not packed
-        await io.mkdirP(pathToInstall)
-        await io.mv(distPath, binPath)
+        await mkdirP(pathToInstall)
+        await mv(distPath, binPath)
         await fs.chmod(binPath, 0o755)
     }
 
     try {
-      await cache.saveCache([pathToInstall], cacheKey)
+      await saveCache([pathToInstall], cacheKey)
     } catch (e) {
-      core.warning(e)
+      warning(e)
     }
   }
 
-  core.addPath(pathToInstall)
+  addPath(pathToInstall)
 }
 
 /**
@@ -117,19 +117,19 @@ async function doInstall(version) {
  * @throws {Error}
  */
 async function doCheck(version) {
-  const gitLeaksBinPath = await io.which('gitleaks', true)
+  const gitLeaksBinPath = await which('gitleaks', true)
 
   if (gitLeaksBinPath === "") {
     throw new Error('gitleaks binary file not found in $PATH')
   }
 
-  core.info(`GitLeaks installed: ${gitLeaksBinPath}`)
-  core.setOutput('gitleaks-bin', gitLeaksBinPath)
+  info(`GitLeaks installed: ${gitLeaksBinPath}`)
+  setOutput('gitleaks-bin', gitLeaksBinPath)
 
   if (version.startsWith('7')) {
-    await exec.exec('gitleaks', ['--version'], {silent: true})
+    await exec('gitleaks', ['--version'], {silent: true})
   } else { // v8.x and latest
-    await exec.exec('gitleaks', ['version'], {silent: true})
+    await exec('gitleaks', ['version'], {silent: true})
   }
 }
 
@@ -152,7 +152,7 @@ async function doRun(version) {
     } else if (envConfigPath) {
       // do nothing, gitleaks app should process this variable on its own side
     } else if (alternativeConfig) {
-      core.info(`  🗒 Alternative config file found: ${alternativeConfig}`)
+      info(`  🗒 Alternative config file found: ${alternativeConfig}`)
       execArgs.push('--config-path', alternativeConfig)
     }
 
@@ -169,7 +169,7 @@ async function doRun(version) {
     } else if (envConfigPath) {
       // do nothing, gitleaks app should process this variable on its own side
     } else if (alternativeConfig) {
-      core.info(`  🗒 Alternative config file found: ${alternativeConfig}`)
+      info(`  🗒 Alternative config file found: ${alternativeConfig}`)
       execArgs.push('--config', alternativeConfig)
     }
 
@@ -183,9 +183,9 @@ async function doRun(version) {
     )
   }
 
-  const exitCode = await exec.exec('gitleaks', execArgs, {ignoreReturnCode: true, delay: 60 * 1000})
-  core.setOutput('exit-code', exitCode)
-  core.setOutput('sarif', sarifReportPath)
+  const exitCode = await exec('gitleaks', execArgs, {ignoreReturnCode: true, delay: 60 * 1000})
+  setOutput('exit-code', exitCode)
+  setOutput('sarif', sarifReportPath)
 
   return exitCode
 }
@@ -225,7 +225,7 @@ async function findAlternativeConfigFile() {
  */
 async function getLatestGitLeaksVersion(githubAuthToken) {
   /** @type {import('@actions/github')} */
-  const octokit = github.getOctokit(githubAuthToken)
+  const octokit = getOctokit(githubAuthToken)
 
   // docs: https://octokit.github.io/rest.js/v18#repos-get-latest-release
   const latest = await octokit.rest.repos.getLatestRelease({
@@ -346,5 +346,5 @@ function stringToBool(s) {
 (async () => {
   await runAction()
 })().catch(error => {
-  core.setFailed(error.message)
+  setFailed(error.message)
 })
