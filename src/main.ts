@@ -16,6 +16,7 @@ const input = {
   path: getInput('path'),
   run: stringToBool(getInput('run')),
   failOnError: stringToBool(getInput('fail-on-error')),
+  generateSummary: stringToBool(getInput('generate-summary')),
   githubToken: getInput('github-token'),
 } as const
 
@@ -263,10 +264,12 @@ try {
     setOutput('exit-code', exitCode)
     setOutput('sarif', reportPath)
 
-    try {
-      await publishSummary(reportPath)
-    } catch (err) {
-      warning(err instanceof Error ? err.message : String(err))
+    if (input.generateSummary) {
+      try {
+        await publishSummary(reportPath)
+      } catch (err) {
+        warning(err instanceof Error ? err.message : String(err))
+      }
     }
 
     if (exitCode !== 0) {
