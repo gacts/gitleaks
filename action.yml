@@ -23,6 +23,10 @@ inputs:
     description: Set "false" for exiting without an error when GitLeaks run failed
     required: false
     default: 'true'
+  generate-summary:
+    description: Set "true" to generate a summary of the GitLeaks run
+    required: false
+    default: 'true'
   github-token:
     description: GitHub auth token. Since there's a default, this is typically not supplied by the user
     required: false

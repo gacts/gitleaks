@@ -12,12 +12,13 @@ This action provides a simple way to run [GitLeaks][gitleaks] in your CI/CD pipe
 (`ubuntu-latest`), **macOS** (`macos-latest`), or **Windows** (`windows-latest`).
 
 In addition, it supports GitLeaks **v8.x** _(and v7.x)_, and uses the GitHub **caching mechanism** to speed up
-your workflow execution time!
+your workflow!
 
 > [!TIP]
-> The [config file](https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml) can be located
-> in `.github` directory _(e.g.: `<repo_root>/.github/.gitleaks.toml`)_, and if `with.config-path` was not
-> provided - it will be used.
+> If neither `with.config-path` nor the `GITLEAKS_CONFIG` environment variable is set, the action uses the first
+> existing non-empty [config file](https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml) from:
+> `gitleaks.toml`, `.gitleaks.toml`, `.github/gitleaks.toml`, `.github/.gitleaks.toml` _(relative to the repository
+> root)_. Otherwise, the GitLeaks default config is used.
 
 ## Additional Configuration
 
@@ -27,9 +28,9 @@ your workflow execution time!
 > Since GitLeaks **v8.10.0**
 
 If you are knowingly committing a test secret that GitLeaks will catch you can add a `gitleaks:allow` comment to
-that line which will instruct GitLeaks to ignore that secret. Ex:
+that line, which instructs GitLeaks to ignore that secret. Example:
 
-```java
+```python
 class CustomClass:
     discord_client_secret = '8dyfuiRyq=vVc3RRr_edRk-fK__JItpZ' #gitleaks:allow
 ```
@@ -54,7 +55,7 @@ jobs:
   gitleaks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with: {fetch-depth: 0}
 
       - name: Check for GitLeaks
@@ -66,28 +67,30 @@ jobs:
         #  path: any/directory/path
 
       #- if: ${{ always() }} # reason - https://github.com/gitleaks/gitleaks/issues/782
-      #  uses: github/codeql-action/upload-sarif@v2
+      #  uses: github/codeql-action/upload-sarif@v4
       #  with:
       #    sarif_file: ${{ steps.gitleaks.outputs.sarif }}
 ```
 
 > [!NOTE]
-> You must use `actions/checkout` before the `gacts/gitleaks` step with `fetch-depth: 0`!
+> Use `actions/checkout` before the `gacts/gitleaks` step. To scan the full git history, set `fetch-depth: 0`
+> (by default, only the latest commit is checked out).
 
 ## Customizing
 
 ### Inputs
 
-Following inputs can be used as `step.with` keys:
+The following inputs can be used as `step.with` keys:
 
-| Name            |   Type    |          Default          | Required | Description                                                              |
-|-----------------|:---------:|:-------------------------:|:--------:|--------------------------------------------------------------------------|
-| `version`       | `string`  |         `latest`          |   yes    | GitLeaks version (`latest` or in `1.2.3` format)                         |
-| `config-path`   | `string`  |         built-in          |    no    | Path to the config file                                                  |
-| `path`          | `string`  | current working directory |    no    | Path to source                                                           |
-| `run`           | `boolean` |          `true`           |    no    | Set it to `true` to run GitLeaks, or `false` if you don't want it to run |
-| `fail-on-error` | `boolean` |          `true`           |    no    | Set `false` for exiting without an error when GitLeaks run failed        |
-| `github-token`  | `string`  |   `${{ github.token }}`   |    no    | GitHub auth token                                                        |
+| Name               |    Type   |          Default          | Required | Description                                                      |
+|--------------------|:---------:|:-------------------------:|:--------:|------------------------------------------------------------------|
+| `version`          |  `string` |          `latest`         |   yes    | GitLeaks version (`latest` or in `1.2.3` format)                 |
+| `config-path`      |  `string` |      auto-discovered      |    no    | Path to the config file (see the tip above for the lookup order) |
+| `path`             |  `string` | current working directory |    no    | Path to the repository, directory, or file                       |
+| `run`              | `boolean` |           `true`          |    no    | Set to `false` to only install GitLeaks without running it       |
+| `fail-on-error`    | `boolean` |           `true`          |    no    | Set to `false` to not fail the step when GitLeaks finds leaks    |
+| `generate-summary` | `boolean` |           `true`          |    no    | Publish the findings to the job summary                          |
+| `github-token`     |  `string` |   `${{ github.token }}`   |    no    | GitHub auth token (used to resolve the `latest` version)         |
 
 ### Outputs
 
@@ -97,7 +100,7 @@ In subsequent steps you will be able to use the following variables:
 |-----------------------------------------------------------------|----------------------------------------------|--------------------------------|
 | Path to the GitLeaks binary file                                | `${{ steps.gitleaks.outputs.gitleaks-bin }}` | `/tmp/gitleaks-8.7.1/gitleaks` |
 | Path to the report in [SARIF format][sarif]                     | `${{ steps.gitleaks.outputs.sarif }}`        | `/tmp/gitleaks.sarif`          |
-| GitLeaks exit code (will be set only if `inputs.run` is `true`) | `${{ steps.gitleaks.outputs.exit-code }}`    | `1`                            |
+| GitLeaks exit code (set only if `inputs.run` is `true`)         | `${{ steps.gitleaks.outputs.exit-code }}`    | `1`                            |
 
 ## How do I remove a secret from git's history?
 
@@ -137,16 +140,12 @@ This is open-source software licensed under the [MIT License][link_license].
 [badge_build]:https://img.shields.io/github/actions/workflow/status/gacts/gitleaks/tests.yml?branch=master&maxAge=30
 [badge_release_version]:https://img.shields.io/github/release/gacts/gitleaks.svg?maxAge=30
 [badge_license]:https://img.shields.io/github/license/gacts/gitleaks.svg?longCache=true
-[badge_release_date]:https://img.shields.io/github/release-date/gacts/gitleaks.svg?maxAge=180
-[badge_commits_since_release]:https://img.shields.io/github/commits-since/gacts/gitleaks/latest.svg?maxAge=45
 [badge_issues]:https://img.shields.io/github/issues/gacts/gitleaks.svg?maxAge=45
 [badge_pulls]:https://img.shields.io/github/issues-pr/gacts/gitleaks.svg?maxAge=45
-
 [link_build]:https://github.com/gacts/gitleaks/actions
 [link_license]:https://github.com/gacts/gitleaks/blob/master/LICENSE
 [link_issues]:https://github.com/gacts/gitleaks/issues
 [link_create_issue]:https://github.com/gacts/gitleaks/issues/new
 [link_pulls]:https://github.com/gacts/gitleaks/pulls
-
 [gitleaks]:https://github.com/gitleaks/gitleaks
 [sarif]:https://github.com/microsoft/sarif-tutorials

@@ -5,17 +5,19 @@
 # Vendor
 /node_modules
 
-# Environment files
-*.env
-
-# yarn lock file (use npm only)
-yarn.lock
-
-# Logs
-logs
-*.log
+## AI shit
+/.copilot
+/.github/copilot*
+/.cursor
+/.claude
+/.windsurf
+/.aider*
+/.gemini
+CLAUDE.md
+AGENTS.md
 
 # Temp dirs & trash
 /temp
 /tmp
-.DS_Store
+logs
+*.log

@@ -1,4 +1,3 @@
 * text=auto
 
 dist/** -diff linguist-generated=true
-Makefile linguist-detectable=false
