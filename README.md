@@ -8,11 +8,19 @@
 [![Build Status][badge_build]][link_build]
 [![License][badge_license]][link_license]
 
-This action provides a simple way to run [GitLeaks][gitleaks] in your CI/CD pipeline. It can be run on **Linux**
-(`ubuntu-latest`), **macOS** (`macos-latest`), or **Windows** (`windows-latest`).
+This action installs [GitLeaks][gitleaks] of the requested version (`latest` by default) and runs it. Add it to
+your workflow and forget about it. It works on **Linux** (`ubuntu-latest`), **macOS** (`macos-latest`), and
+**Windows** (`windows-latest`).
 
-In addition, it supports GitLeaks **v8.x** _(and v7.x)_, and uses the GitHub **caching mechanism** to speed up
-your workflow!
+If you need custom GitLeaks flags, set `with.run: false` to only install it, and run `gitleaks` yourself - the binary
+is added to `PATH`, and its location is available in the `gitleaks-bin` [output](#outputs).
+
+Why this one:
+
+- **No license key** - works in any repository, including private ones (unlike the
+  [official action](https://github.com/gitleaks/gitleaks-action)).
+- **No Docker/building in runtime** - it is a native JavaScript action (no image to pull or build, no extra overhead).
+- **Caching** - the GitLeaks binary is cached between runs, so the useful work starts in about 3 seconds.
 
 > [!TIP]
 > If neither `with.config-path` nor the `GITLEAKS_CONFIG` environment variable is set, the action uses the first
@@ -109,7 +117,7 @@ In subsequent steps you will be able to use the following variables:
 [removing-sensitive-data]:https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository
 [bfg]:https://rtyley.github.io/bfg-repo-cleaner/
 
-## Alternative projects
+## Alternative actions
 
 - [Official GitHub action](https://github.com/gitleaks/gitleaks-action) (license key is required)
 
