@@ -54,7 +54,7 @@ jobs:
   gitleaks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with: {fetch-depth: 0}
 
       - name: Check for GitLeaks
